@@ -1,0 +1,28 @@
+# --- local credentials (never publish) ---
+src/config.json
+
+# --- capture artifacts: live tokens and your own chat content ---
+capture/certs/
+capture/*.jsonl
+capture/*.out
+capture/*.log
+capture/*.backup
+capture/decoded.txt
+capture/key_opts.txt
+capture/ws_url.txt
+capture/screen*.png
+capture/hosts-acl.txt
+*.out
+*.bak
+
+# --- python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- editors / os ---
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

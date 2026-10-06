@@ -1,0 +1,13 @@
+# Windows batch and PowerShell scripts must keep CRLF endings, otherwise
+# cmd.exe truncates lines and the launchers stop working after a clone.
+*.cmd  text eol=crlf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+
+# Python and docs are fine either way; normalise to LF in the repository.
+*.py   text eol=lf
+*.md   text eol=lf
+*.json text eol=lf
+
+# Keep the Chinese filenames readable in `git status`.
+core.quotepath false

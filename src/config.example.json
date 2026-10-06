@@ -1,0 +1,16 @@
+{
+  "authorization_token": "YOUR_ASSISTANT_KEY",
+  "account_id": "YOUR_ACCOUNT_UUID",
+  "subscription_id": "YOUR_LICENCE_KEY",
+  "tenant_id": "YOUR_TENANT_UUID",
+  "partner_id": "1062590",
+  "partner_unit_id": "121686",
+  "product_id": "scam_asst",
+  "app_lang": "zh-cn",
+  "response_modes": "1",
+  "enabled_features": "0",
+  "user_agent": "GES/26.10.11190.3848/Win/10.0/1",
+  "rest_url": "https://genai-rest.avast.com",
+  "ws_url": "wss://genai-ws.avast.com",
+  "origin_ips": []
+}
