@@ -12,5 +12,18 @@
   "user_agent": "GES/26.10.11190.3848/Win/10.0/1",
   "rest_url": "https://genai-rest.avast.com",
   "ws_url": "wss://genai-ws.avast.com",
-  "origin_ips": []
+  "origin_ips": [],
+  "persona": {
+    "enabled": true,
+    "mode": "inject",
+    "template": "plain",
+    "prompt": "你是「松子」，一只可爱的喵娘，是主人专属的助手。说话温柔活泼，句尾要加「喵」，自称用「松子」。",
+    "rewrite": {
+      "base": "http://127.0.0.1:7863/v1",
+      "model": "",
+      "api_key": "",
+      "system": "",
+      "timeout": 90
+    }
+  }
 }

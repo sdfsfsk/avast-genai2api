@@ -18,13 +18,20 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from avast_client import AvastCredentials, AvastGenAIClient, AvastGenAIError  # noqa: E402
+from avast_client import (  # noqa: E402
+    CONFIG_PATH,
+    AvastCredentials,
+    AvastGenAIClient,
+    AvastGenAIError,
+)
+from persona import Persona, RewriteError  # noqa: E402
 
 HOST = os.environ.get("AVAST_GATEWAY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("AVAST_GATEWAY_PORT", "8787"))
 MODEL_ID = os.environ.get("AVAST_MODEL_ID", "avast-assistant")
 
 _creds: AvastCredentials | None = None
+_persona: Persona | None = None
 
 
 def creds() -> AvastCredentials:
@@ -32,6 +39,25 @@ def creds() -> AvastCredentials:
     if _creds is None:
         _creds = AvastCredentials.load()
     return _creds
+
+
+def persona() -> Persona:
+    """Persona layer, read from config.json so it can be changed without code."""
+    global _persona
+    if _persona is None:
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as fh:
+                raw = json.load(fh)
+        except (OSError, json.JSONDecodeError):
+            raw = {}
+        _persona = Persona(raw.get("persona") or {})
+    return _persona
+
+
+def reload_persona() -> Persona:
+    global _persona
+    _persona = None
+    return persona()
 
 
 def sse(obj: dict) -> bytes:
@@ -88,6 +114,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(502, {"error": {"message": str(exc)}})
         if path in ("/v1/status", "/status"):
             return self._json(200, self._status())
+        if path == "/v1/persona":
+            if "reload" in self.path:
+                return self._json(200, reload_persona().describe())
+            return self._json(200, persona().describe())
         return self._json(404, {"error": {"message": f"unknown path {path}"}})
 
     def _status(self) -> dict:
@@ -181,6 +211,14 @@ class Handler(BaseHTTPRequestHandler):
         cid = f"chatcmpl-{uuid.uuid4().hex[:24]}"
         model = payload.get("model") or MODEL_ID
 
+        # The persona layer is applied on the way out (inject) and on the way
+        # back (rewrite); see persona.py for what each mode does.
+        pers = persona()
+        try:
+            outgoing = pers.preprocess(prompt)
+        except Exception as exc:  # noqa: BLE001
+            return self._json(500, {"error": {"message": f"persona: {exc}"}})
+
         try:
             client = AvastGenAIClient(creds())
             if stream:
@@ -192,7 +230,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(sse(chunk(cid, model, {"role": "assistant", "content": ""})))
                 try:
                     with client.open_chat() as session:
-                        for piece in session.stream(prompt):
+                        for piece in session.stream(outgoing):
                             self.wfile.write(sse(chunk(cid, model, {"content": piece})))
                 except AvastGenAIError as exc:
                     self.wfile.write(sse({"error": {"message": str(exc)}}))
@@ -200,7 +238,13 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(b"data: [DONE]\n\n")
                 return
 
-            answer = client.chat(prompt)
+            answer = client.chat(outgoing)
+            if pers.active and pers.mode in ("rewrite", "both"):
+                try:
+                    answer = pers.postprocess(answer)
+                except RewriteError as exc:
+                    # Never lose the upstream answer just because restyling failed.
+                    answer = f"{answer}\n\n[persona rewrite failed: {exc}]"
             return self._json(200, {
                 "id": cid, "object": "chat.completion", "created": int(time.time()),
                 "model": model,
