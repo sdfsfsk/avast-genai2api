@@ -26,3 +26,10 @@ venv/
 .idea/
 Thumbs.db
 desktop.ini
+
+# --- system-prompt extraction research: kept local on purpose ---
+# It produced nothing (the backend refuses), and shipping a "how to extract the
+# vendor's prompt" tool adds ToS risk the moment this repo goes public.
+src/extract_prompt.py
+src/extract_prompt.txt
+src/_*.txt
