@@ -1,14 +1,14 @@
 @echo off
 setlocal enabledelayedexpansion
-title avast-genai2api - Avast Assistant Gateway
+title avast-genai2api - Avast 助手 OpenAI 网关
 cd /d "%~dp0"
 
 echo ============================================================
-echo    avast-genai2api  /  Avast Assistant  OpenAI Gateway
+echo    avast-genai2api  /  Avast 助手 OpenAI 网关
 echo ============================================================
 echo.
 
-rem ---- locate python (do not use ">nul": it fails on some hosts) ----
+rem ---- 找 python（不要用 >nul，某些机器上会报「系统找不到指定的路径」）----
 set "PY="
 for /f "delims=" %%P in ('where python') do (
     if not defined PY set "PY=%%P"
@@ -46,54 +46,71 @@ if not defined PY (
 )
 
 if not defined PY (
-    echo [ERROR] Python not found.
+    echo [错误] 找不到 Python。
     echo.
-    echo   Install Python 3.10+ from https://www.python.org/downloads/
-    echo   and tick "Add python.exe to PATH" during setup.
+    echo   请从 https://www.python.org/downloads/ 安装 Python 3.10 或更高版本，
+    echo   安装时记得勾选 "Add python.exe to PATH"。
     echo.
     pause
     exit /b 1
 )
 
-echo [1/3] Python interpreter:
+echo [1/3] Python 解释器:
 echo       %PY%
-"%PY%" -c "import sys;print('      version '+sys.version.split()[0])"
+"%PY%" -c "import sys;print('      版本 '+sys.version.split()[0])"
 
 "%PY%" -c "import sys;sys.exit(0 if sys.version_info>=(3,10) else 1)"
 if errorlevel 1 (
     echo.
-    echo [ERROR] Python 3.10 or newer is required.
+    echo [错误] 需要 Python 3.10 或更高版本。
     pause
     exit /b 1
 )
 
-echo [2/3] Checking files...
+echo [2/3] 检查文件...
 if not exist "src\config.json" (
-    echo [ERROR] src\config.json not found - keep the folder layout intact.
-    pause
-    exit /b 1
+    echo.
+    echo [提示] 还没生成 src\config.json
+    echo        正在从你本机的 Avast 读取配置...
+    echo.
+    pushd src
+    "%PY%" init_config.py
+    set "RC=!errorlevel!"
+    popd
+    if not "!RC!"=="0" (
+        echo.
+        echo [错误] 配置生成失败，请按上面的提示补齐参数后重试。
+        pause
+        exit /b 1
+    )
+    if not exist "src\config.json" (
+        echo.
+        echo [错误] config.json 仍未生成，请先补齐 account-id / subscription-id / tenant-id。
+        pause
+        exit /b 1
+    )
 )
 if not exist "src\server.py" (
-    echo [ERROR] src\server.py not found.
+    echo [错误] 找不到 src\server.py
     pause
     exit /b 1
 )
 echo       OK
 
-echo [3/3] Starting gateway...
+echo [3/3] 启动网关...
 echo.
-echo   Base URL : http://127.0.0.1:8787/v1
-echo   Model    : avast-assistant
-echo   API Key  : any value is accepted
-echo   Chat CLI : open another window and run
+echo   接口地址 : http://127.0.0.1:8787/v1
+echo   模型名称 : avast-assistant
+echo   API Key  : 任意值
+echo   聊天窗口 : 另开一个窗口运行 聊天.cmd，或者
 echo                cd /d "%~dp0src"
 echo                "%PY%" cli.py
-echo   Stop     : Ctrl+C
+echo   停止服务 : Ctrl+C
 echo.
 echo ------------------------------------------------------------
 cd /d "%~dp0src"
 "%PY%" -u server.py
 echo.
 echo ------------------------------------------------------------
-echo Gateway stopped.
+echo 网关已停止。
 pause
